@@ -13,7 +13,7 @@ import           Prelude (fail)
 
 import           Cardano.Api.Orphans ()
 
-import           Data.Aeson (FromJSON (..), ToJSON (..), ToJSONKey, Value (..))
+import           Data.Aeson (FromJSON (..), ToJSON (..), ToJSONKey, Value (..), withObject, (.:))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Text as Text
@@ -26,7 +26,7 @@ import qualified Cardano.Ledger.Alonzo as Alonzo
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
+import           Cardano.Ledger.Alonzo.Translation (AlonzoGenesis (..))
 import qualified Cardano.Ledger.Compactible as Ledger
 import qualified Cardano.Ledger.Mary.Value as Mary
 import qualified Data.MemoBytes as MemoBytes
@@ -63,9 +63,9 @@ deriving instance ToJSONKey SBS.ShortByteString
 deriving instance ToJSONKey ByteString
 deriving instance ToJSONKey Alonzo.Language
 deriving instance ToJSON Alonzo.CostModel
-
-
-deriving instance ToJSON (Alonzo.TxOut (Alonzo.AlonzoEra StandardCrypto))
+deriving instance ToJSON (MemoBytes.MemoBytes (Map Text Integer))
+deriving instance FromJSON Alonzo.Prices
+deriving instance FromJSON Alonzo.ExUnits
 
 deriving instance ToJSON (Shelley.CompactAddr StandardCrypto)
 deriving instance Generic (Shelley.CompactAddr StandardCrypto)
@@ -78,3 +78,22 @@ instance FromJSON Update.ApplicationName where
   parseJSON invalid  =
     fail $ "Parsing of application name failed due to type mismatch. "
     <> "Encountered: " <> show invalid
+
+-- We defer parsing of the cost model so that we can
+-- read it as a filepath. This is to reduce further pollution
+-- of the genesis file.
+instance FromJSON AlonzoGenesis where
+  parseJSON = withObject "Alonzo Genesis" $ \o -> do
+    adaPerWord <-  o .: "alonzoAdaPerUTxOWord"
+    execPrices <-  o .: "alonzoExecutionPrices"
+    maxTxExUnits' <-  o .: "alonzoMaxTxExUnits"
+    maxBlockExUnits' <-  o .: "alonzoMaxBlockExUnits"
+    maxMaSize <-  o .: "alonzoMaxMultiAssetSize"
+    return $ AlonzoGenesis
+               { adaPerUTxOWord = adaPerWord
+               , costmdls = mempty
+               , prices = execPrices
+               , maxTxExUnits = maxTxExUnits'
+               , maxBlockExUnits = maxBlockExUnits'
+               , maxValSize = maxMaSize
+               }

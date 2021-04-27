@@ -14,11 +14,12 @@ import           Control.Monad.Trans.Except.Extra (firstExceptT)
 import           Cardano.Node.Configuration.POM (NodeConfiguration (..))
 import           Cardano.Node.Types
 
+import           Cardano.Node.Orphans ()
+import           Cardano.Node.Protocol.Alonzo
 import           Cardano.Node.Protocol.Byron
 import           Cardano.Node.Protocol.Cardano
 import           Cardano.Node.Protocol.Shelley
 import           Cardano.Node.Protocol.Types (SomeConsensusProtocol (..))
-
 ------------------------------------------------------------------------------
 -- Conversions from configuration into specific protocols and their params
 --
@@ -39,11 +40,13 @@ mkConsensusProtocol NodeConfiguration{ncProtocolConfig, ncProtocolFiles} =
 
       NodeProtocolConfigurationCardano byronConfig
                                        shelleyConfig
+                                       alonzoConfig
                                        hardForkConfig ->
         firstExceptT CardanoProtocolInstantiationError $
           mkSomeConsensusProtocolCardano
             byronConfig
             shelleyConfig
+            alonzoConfig
             hardForkConfig
             (Just ncProtocolFiles)
 
@@ -54,6 +57,7 @@ mkConsensusProtocol NodeConfiguration{ncProtocolConfig, ncProtocolFiles} =
 data ProtocolInstantiationError =
     ByronProtocolInstantiationError   ByronProtocolInstantiationError
   | ShelleyProtocolInstantiationError ShelleyProtocolInstantiationError
+  | AlonzoProtocolInstantiationError AlonzoProtocolInstantiationError
   | CardanoProtocolInstantiationError CardanoProtocolInstantiationError
   deriving Show
 
@@ -69,3 +73,4 @@ renderProtocolInstantiationError pie =
 
     CardanoProtocolInstantiationError cpie ->
       renderCardanoProtocolInstantiationError cpie
+    AlonzoProtocolInstantiationError _ -> panic "FIX ME"

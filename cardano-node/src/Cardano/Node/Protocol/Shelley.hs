@@ -81,8 +81,7 @@ mkSomeConsensusProtocolShelley NodeShelleyProtocolConfiguration {
         shelleyBasedGenesis = genesis,
         shelleyBasedInitialNonce = genesisHashToPraosNonce genesisHash,
         shelleyBasedLeaderCredentials =
-            leaderCredentials,
-        shelleyTranslationContext = ()
+            leaderCredentials
       }
       Consensus.ProtocolParamsShelley {
         shelleyProtVer =

@@ -16,6 +16,7 @@ import           Cardano.Prelude hiding (show)
 import           Prelude (String, show)
 
 import           Control.Monad.Class.MonadTime (DiffTime, Time (..))
+import           Data.Aeson (Value (..))
 import           Data.Text (pack)
 
 import           Network.Mux (MuxTrace (..), WithMuxBearer (..))

@@ -66,6 +66,7 @@ library
                        Cardano.Node.Handlers.TopLevel
                        Cardano.Node.Orphans
                        Cardano.Node.Protocol
+                       Cardano.Node.Protocol.Alonzo
                        Cardano.Node.Protocol.Byron
                        Cardano.Node.Protocol.Cardano
                        Cardano.Node.Protocol.Shelley
@@ -136,6 +137,8 @@ library
                       , ouroboros-consensus-shelley
                       , ouroboros-network
                       , ouroboros-network-framework
+                      , plutus-core
+                      , plutus-ledger-api
                       , process
                       , safe-exceptions
                       , scientific
