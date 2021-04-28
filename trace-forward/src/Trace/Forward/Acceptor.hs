@@ -29,6 +29,7 @@ runTraceAcceptor
   -> IO ()
 runTraceAcceptor config loQueue =
   try (listenToForwarder config loQueue) >>= \case
-    Left (_e :: SomeException) ->
+    Left (e :: SomeException) -> do
+      putStrLn $ "trace-forward, acceptor problem: " <> show e
       runTraceAcceptor config loQueue
     Right _ -> return ()
