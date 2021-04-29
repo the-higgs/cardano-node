@@ -491,7 +491,7 @@ makeShelleyUpdateProposal params genesisKeyHashes =
 
 
 -- ----------------------------------------------------------------------------
--- Genesis paramaters
+-- Genesis parameters
 --
 
 data GenesisParameters =

@@ -80,7 +80,9 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                              npcShelleyGenesisFile,
                              npcShelleyGenesisFileHash
                            }
-                           (NodeAlonzoProtocolConfiguration _)
+                           NodeAlonzoProtocolConfiguration {
+                             npcAlonzoGenesisFile
+                           }
                            NodeHardForkProtocolConfiguration {
                              npcTestShelleyHardForkAtEpoch,
                              npcTestShelleyHardForkAtVersion,
@@ -178,7 +180,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
             ProtVer 4 0
         }
         Consensus.ProtocolParamsAlonzo {
-          -- This is /not/ the Mary protocol version. It is the protocol
+          -- This is /not/ the Alonzo protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
           -- is in the Alonzo era. Since Alonzo is currently the last known
           -- protocol version then this is a        Consensus.ProtocolParamsTransition {
