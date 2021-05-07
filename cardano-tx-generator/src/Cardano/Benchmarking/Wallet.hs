@@ -42,6 +42,15 @@ walletDeleteFund :: Wallet -> Fund -> Wallet
 walletDeleteFund w f
   = w { walletFunds = FundSet.deleteFund (walletFunds w) f }
 
+walletRefCreateChange :: forall era. IsShelleyBasedEra era
+  => WalletRef
+  -> [Lovelace]
+  -> IO (Either String (Tx era))
+walletRefCreateChange ref coins
+  = modifyMVar ref $ \w -> case walletCreateChange w coins of
+     Right (newWallet, tx) -> return (newWallet, Right tx)
+     Left err -> return (w, Left err)
+
 walletCreateChange :: forall era. IsShelleyBasedEra era
   => Wallet
   -> [Lovelace]

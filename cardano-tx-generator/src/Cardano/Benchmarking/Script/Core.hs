@@ -20,12 +20,16 @@ import           Control.Monad
 import           Control.Monad.Trans.Except
 import           Control.Monad.IO.Class
 import           Control.Concurrent (threadDelay)
+import           Control.Tracer (traceWith)
 
+import           Ouroboros.Network.Protocol.LocalTxSubmission.Type (SubmitResult (..))
 import           Cardano.Api ( AsType(..), CardanoEra(..), InAnyCardanoEra(..), AnyCardanoEra(..), IsShelleyBasedEra, Tx
-                             , NetworkId(..), cardanoEra
+                             , Lovelace, NetworkId(..), cardanoEra
                              , CardanoMode, LocalNodeConnectInfo
-                             , SigningKey
                              , PaymentKey
+                             , SigningKey
+                             , TxInMode
+                             , TxValidationErrorInMode
                              , getLocalChainTip, queryNodeLocalState, QueryInMode( QueryCurrentEra), ConsensusModeIsMultiEra( CardanoModeIsMultiEra )
                              , chainTipToChainPoint )
 
@@ -34,13 +38,15 @@ import           Cardano.Benchmarking.FundSet (FundInEra(..), Validity(..), lift
 import           Cardano.Benchmarking.GeneratorTx as Core
                    (AsyncBenchmarkControl, asyncBenchmark, waitBenchmark, readSigningKey, secureGenesisFund, splitFunds, txGenerator, TxGenError)
 
-import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress)
+import           Cardano.Benchmarking.GeneratorTx.Tx as Core (keyAddress, txInModeCardano)
 import           Cardano.Benchmarking.GeneratorTx.LocalProtocolDefinition as Core (startProtocol)
 import           Cardano.Benchmarking.GeneratorTx.NodeToNode (ConnectClient, benchmarkConnectTxSubmit)
 import           Cardano.Benchmarking.OuroborosImports as Core
                    (LocalSubmitTx, SigningKeyFile
                    , getGenesis, protocolToNetworkId, protocolToCodecConfig, makeLocalConnectInfo, submitTxToNodeLocal)
-import           Cardano.Benchmarking.Tracer as Core (createTracers, btTxSubmit_, btN2N_, btConnect_, btSubmission_)
+import           Cardano.Benchmarking.Tracer as Core
+                   ( TraceBenchTxSubmit (..)
+                   , createTracers, btTxSubmit_, btN2N_, btConnect_, btSubmission_)
 import           Cardano.Benchmarking.Types as Core (NumberOfTxs(..), SubmissionErrorPolicy(..), TPSRate)
 import           Cardano.Benchmarking.Wallet
 
@@ -87,7 +93,7 @@ secureGenesisFund
    -> ActionM ()
 secureGenesisFund fundName destKey genesisKeyName = do
   tracer <- btTxSubmit_ <$> get BenchTracers
-  localSubmitTx <- getLocalSubmitTx
+  localSubmit <- getLocalSubmitTx
   networkId <- get NetworkId
   genesis  <- get Genesis
   fee      <- getUser TFee
@@ -98,7 +104,7 @@ secureGenesisFund fundName destKey genesisKeyName = do
     coreCall :: forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO Store.Fund
     coreCall _proxy = do
       let addr = Core.keyAddress @ era networkId fundKey
-      f <- Core.secureGenesisFund tracer localSubmitTx networkId genesis fee ttl genesisKey addr
+      f <- Core.secureGenesisFund tracer localSubmit networkId genesis fee ttl genesisKey addr
       return (f, fundKey)
   liftCoreWithEra coreCall >>= \case
     Left err -> liftTxGenError err
@@ -127,7 +133,7 @@ splitFundN
    -> ActionM [Store.Fund]
 splitFundN count destKeyName sourceFund = do
   tracer <- btTxSubmit_ <$> get BenchTracers
-  localSubmitTx <- getLocalSubmitTx
+  localSubmit <- getLocalSubmitTx
   networkId <- get NetworkId
   fee      <- getUser TFee
   destKey  <- getName destKeyName
@@ -137,7 +143,7 @@ splitFundN count destKeyName sourceFund = do
     coreCall :: forall era. IsShelleyBasedEra era => AsType era -> ExceptT TxGenError IO [Store.Fund]
     coreCall _proxy = do
       let addr = Core.keyAddress @ era networkId fundKey
-      f <- Core.splitFunds tracer localSubmitTx fee count txIn fundKey addr fund
+      f <- Core.splitFunds tracer localSubmit fee count txIn fundKey addr fund
       return $ zip f $ repeat destKey
   liftCoreWithEra coreCall >>= \case
     Left err -> liftTxGenError err
@@ -265,4 +271,37 @@ and for which the JSON encoding is "reserved".
 -}
 reserved :: [String] -> ActionM ()
 reserved _ = do
-  throwE $ UserError "no dirty hack is implemented"
+  localCreateChange
+--  throwE $ UserError "no dirty hack is implemented"
+
+localCreateChange :: ActionM ()
+localCreateChange = do
+  wallet <- get GlobalWallet
+  let
+    -- todo: fix hardcoded number of initial coins
+    outputs :: [[Lovelace]]
+    outputs = replicate 100 $ map fromInteger [20..50]
+
+    createChange :: forall era. IsShelleyBasedEra era => [Lovelace] -> AsType era -> ActionM (Either String (TxInMode CardanoMode))
+    createChange coins _proxy = do
+      (tx :: Either String (Tx era)) <- liftIO $ walletRefCreateChange wallet coins
+      return $ fmap txInModeCardano tx
+  forM_ outputs $ \coins -> do
+    gen <- withEra $ createChange coins
+    case gen of
+      Left (_err :: String) -> return ()
+      Right tx -> void $ localSubmitTx tx
+
+localSubmitTx :: TxInMode CardanoMode -> ActionM (SubmitResult (TxValidationErrorInMode CardanoMode))
+localSubmitTx tx = do
+  submitTracer <- btTxSubmit_ <$> get BenchTracers
+  submit <- getLocalSubmitTx
+  ret <- liftIO $ submit tx
+  let
+    msg = case ret of
+      SubmitSuccess -> mconcat
+        [ "local submit success (" , show tx , ")"]
+      SubmitFail e -> mconcat
+        [ "local submit failed: " , show e , " (" , show tx , ")"]
+  liftIO $ traceWith submitTracer $ TraceBenchTxSubDebug msg
+  return ret
