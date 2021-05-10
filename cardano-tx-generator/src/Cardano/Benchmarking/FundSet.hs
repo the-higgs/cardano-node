@@ -23,10 +23,10 @@ import Cardano.Api as Api
 -- When building a new TX they provide the TxIn parts.
 
 data FundInEra era = FundInEra {
-    _fundTxIn :: TxIn
-  , _fundVal  :: TxOutValue era
-  , _fundSigningKey :: SigningKey PaymentKey
-  , _fundValidity :: Validity
+    _fundTxIn :: !TxIn
+  , _fundVal  :: !(TxOutValue era)
+  , _fundSigningKey :: !(SigningKey PaymentKey)
+  , _fundValidity :: !Validity
   } deriving (Show)
 
 deriving instance Show ShelleyWitnessSigningKey
@@ -34,7 +34,7 @@ deriving instance Show ShelleyWitnessSigningKey
 data Validity
   = Confirmed
 --   | Genesis  
-  | InFlight Target SeqNumber
+  | InFlight !Target !SeqNumber
   deriving  (Show, Eq, Ord)
 
 newtype Target = Traget String
@@ -104,13 +104,6 @@ insertFund s f = updateIx (getFundTxIn f) f s
 
 deleteFund :: FundSet -> Fund -> FundSet
 deleteFund s f = deleteIx (getFundTxIn f) s
-  
-findSufficientCoin :: FundSet -> Lovelace -> Either String Fund
-findSufficientCoin fs minValue = case coins of
-  [] -> Left $ "findSufficientCoin: no singel coin with min value >= " ++ show minValue
-  (c:_) -> Right c
-  where
-    coins = toAscList ( Proxy :: Proxy Lovelace) (fs @>= minValue)
 
 liftAnyEra :: ( forall era. IsCardanoEra era => f1 era -> f2 era ) -> InAnyCardanoEra f1 -> InAnyCardanoEra f2
 liftAnyEra f x = case x of

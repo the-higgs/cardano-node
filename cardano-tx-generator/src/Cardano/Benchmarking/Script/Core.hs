@@ -271,23 +271,23 @@ and for which the JSON encoding is "reserved".
 -}
 reserved :: [String] -> ActionM ()
 reserved _ = do
-  localCreateChange
+  localCreateCoins
 --  throwE $ UserError "no dirty hack is implemented"
 
-localCreateChange :: ActionM ()
-localCreateChange = do
+localCreateCoins :: ActionM ()
+localCreateCoins = do
   wallet <- get GlobalWallet
   let
     -- todo: fix hardcoded number of initial coins
     outputs :: [[Lovelace]]
     outputs = replicate 100 $ map fromInteger [20..50]
 
-    createChange :: forall era. IsShelleyBasedEra era => [Lovelace] -> AsType era -> ActionM (Either String (TxInMode CardanoMode))
-    createChange coins _proxy = do
-      (tx :: Either String (Tx era)) <- liftIO $ walletRefCreateChange wallet coins
+    createCoins :: forall era. IsShelleyBasedEra era => [Lovelace] -> AsType era -> ActionM (Either String (TxInMode CardanoMode))
+    createCoins coins _proxy = do
+      (tx :: Either String (Tx era)) <- liftIO $ walletRefCreateCoins wallet coins
       return $ fmap txInModeCardano tx
   forM_ outputs $ \coins -> do
-    gen <- withEra $ createChange coins
+    gen <- withEra $ createCoins coins
     case gen of
       Left (_err :: String) -> return ()
       Right tx -> void $ localSubmitTx tx
