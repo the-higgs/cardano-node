@@ -453,6 +453,7 @@ fromConsensusQueryResult (QueryInEra ByronEraInByronMode
       (Ledger.BlockQuery (Consensus.DegenQuery Consensus.GetUpdateInterfaceState),
        Consensus.DegenQueryResult r'') ->
         Right (ByronUpdateState r'')
+      (Ledger.GetPartialLedgerConfig, Consensus.HardForkLedgerConfig _ _) -> error "TODO 1"
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      QueryByronUpdateState) q' r' =
@@ -470,6 +471,7 @@ fromConsensusQueryResult (QueryInEra ShelleyEraInShelleyMode
     case (q', r') of
       (Ledger.BlockQuery (Consensus.DegenQuery q''), Consensus.DegenQueryResult r'') ->
         Right (fromConsensusQueryResultShelleyBased ShelleyBasedEraShelley q q'' r'')
+      (Ledger.GetPartialLedgerConfig, Consensus.HardForkLedgerConfig _ _) -> error "TODO 2"
 
 fromConsensusQueryResult (QueryInEra ByronEraInCardanoMode
                                      (QueryInShelleyBasedEra era _)) _ _ =
