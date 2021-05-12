@@ -127,7 +127,7 @@ let
     [ "checks" "tests" "cardano-node-chairman" ]
     [ "workbench" ] [ "profiles" ]
     [ "haskellPackages" "cardano-node-chairman" "checks" ] [ "checks" "tests" "cardano-node-chairman" ]
-    [ "tx-generator" ]
+    [ "haskellPackages" "tx-generator" ]
   ];
   # Paths or prefix of paths for which cross-builds (mingwW64, musl64) are disabled:
   noCrossBuild = [
