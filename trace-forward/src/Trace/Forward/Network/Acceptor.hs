@@ -17,7 +17,7 @@ import           Control.Monad.Class.MonadSTM.Strict (StrictTVar, atomically, mo
                                                       readTVar, retry)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Functor ((<&>))
-import           Data.IORef (readIORef)
+import           Data.IORef (atomicModifyIORef', readIORef)
 import qualified Data.Text as T
 import           Data.Typeable (Typeable)
 import           Data.Void (Void)
@@ -43,7 +43,8 @@ import           Ouroboros.Network.Protocol.Handshake.Unversioned (UnversionedPr
                                                                    unversionedHandshakeCodec,
                                                                    unversionedProtocolDataCodec)
 import           Ouroboros.Network.Protocol.Handshake.Type (Handshake)
-import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion, simpleSingletonVersions)
+import           Ouroboros.Network.Protocol.Handshake.Version (acceptableVersion,
+                                                               simpleSingletonVersions)
 import           Ouroboros.Network.Util.ShowProxy (ShowProxy(..))
 
 import qualified Trace.Forward.Protocol.Acceptor as Acceptor
@@ -59,8 +60,9 @@ listenToForwarder
       Typeable lo)
   => AcceptorConfiguration lo
   -> TBQueue lo
+  -> NodeInfoStore
   -> IO ()
-listenToForwarder config@AcceptorConfiguration {..} loQueue = withIOManager $ \iocp ->
+listenToForwarder config@AcceptorConfiguration{..} loQueue niStore = withIOManager $ \iocp ->
   case forwarderEndpoint of
     LocalPipe localPipe -> do
       let snocket = localSnocket iocp localPipe
@@ -76,7 +78,7 @@ listenToForwarder config@AcceptorConfiguration {..} loQueue = withIOManager $ \i
           [ MiniProtocol
               { miniProtocolNum    = MiniProtocolNum 1
               , miniProtocolLimits = MiniProtocolLimits { maximumIngressQueue = maxBound }
-              , miniProtocolRun    = acceptLogObjects config loQueue
+              , miniProtocolRun    = acceptLogObjects config loQueue niStore
               }
           ]
 
@@ -115,8 +117,9 @@ acceptLogObjects
       Typeable lo)
   => AcceptorConfiguration lo
   -> TBQueue lo
+  -> NodeInfoStore
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
-acceptLogObjects config loQueue =
+acceptLogObjects config loQueue niStore =
   ResponderProtocolOnly $
     MuxPeerRaw $ \channel -> do
       sv <- newEmptyTMVarIO
@@ -130,7 +133,8 @@ acceptLogObjects config loQueue =
           (byteLimitsTraceForward (fromIntegral . LBS.length))
           timeLimitsTraceForward
           channel
-          (Acceptor.traceAcceptorPeer $ acceptorActions config loQueue False)
+          (Acceptor.traceAcceptorPeer $
+            acceptorActions config loQueue niStore True False)
       atomically $ putTMVar sv r
       waitSibling siblingVar
       return ((), trailing)
@@ -148,14 +152,24 @@ acceptorActions
       Typeable lo)
   => AcceptorConfiguration lo
   -> TBQueue lo
+  -> NodeInfoStore
+  -> Bool
   -> Bool
   -> Acceptor.TraceAcceptor lo IO ()
-acceptorActions config@AcceptorConfiguration{..} loQueue False =
-  Acceptor.SendMsgRequest TokBlocking whatToRequest $ \reply -> do
-    writeLogObjectsToQueue reply loQueue
-    actionOnReply $ logObjectsFromReply reply
-    readIORef shouldWeStop <&> acceptorActions config loQueue
+acceptorActions config@AcceptorConfiguration{..} loQueue niStore askForNI False =
+  -- We can send request for the node's basic info or for the new 'LogObject's.
+  -- But request for node's info should be sent only once (in the beginning of session).
+  if askForNI
+    then
+      Acceptor.SendMsgNodeInfoRequest $ \reply -> do
+        atomicModifyIORef' niStore $ const $ (reply, ())
+        readIORef shouldWeStop <&> acceptorActions config loQueue niStore False
+    else
+      Acceptor.SendMsgRequest TokBlocking whatToRequest $ \reply -> do
+        writeLogObjectsToQueue reply loQueue
+        actionOnReply $ logObjectsFromReply reply
+        readIORef shouldWeStop <&> acceptorActions config loQueue niStore False
 
-acceptorActions AcceptorConfiguration{..} _ True =
+acceptorActions AcceptorConfiguration{..} _ _ _ True =
   Acceptor.SendMsgDone
     actionOnDone

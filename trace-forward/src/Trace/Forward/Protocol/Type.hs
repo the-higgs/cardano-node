@@ -23,9 +23,11 @@ module Trace.Forward.Protocol.Type
   , Request (..)
   , BlockingReplyList (..)
   , NodeInfo
+  , NodeInfoStore
   ) where
 
 import           Codec.Serialise (Serialise (..))
+import           Data.IORef (IORef)
 import           Data.List.NonEmpty (NonEmpty)
 import           Data.Proxy (Proxy(..))
 import           Data.Text (Text)
@@ -128,6 +130,9 @@ deriving instance Show lo => Show (BlockingReplyList blocking lo)
 -- | The node (on the forwarder side) provides its basic information, such as
 --   protocol, version, start time, unique name, etc.
 type NodeInfo = [(Text, Text)]
+
+-- | The store for 'NodeInfo', will be used on the acceptor's side to store received node's info.
+type NodeInfoStore = IORef NodeInfo
 
 instance Protocol (TraceForward lo) where
 

@@ -63,7 +63,7 @@ import           System.Metrics.Network.Acceptor (acceptEKGMetrics)
 
 import           Cardano.Logger.Configuration
 import           Cardano.Logger.Types (AcceptedItems, LogObjects, Metrics,
-                                       prepareAcceptedItems)
+                                       addressToNodeId, prepareAcceptedItems)
 
 runAcceptors
   :: LoggerConfig
@@ -205,7 +205,7 @@ runEKGAcceptor
   -> ConnectionId addr
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
 runEKGAcceptor ekgConfig acceptedItems connId = do
-  let (_, (ekgStore, localStore)) =
+  let (_, _, (ekgStore, localStore)) =
         unsafePerformIO $ prepareStores acceptedItems connId
   acceptEKGMetrics ekgConfig ekgStore localStore
 
@@ -216,18 +216,18 @@ runLogObjectsAcceptor
   -> ConnectionId addr
   -> RunMiniProtocol 'ResponderMode LBS.ByteString IO Void ()
 runLogObjectsAcceptor tfConfig acceptedItems connId = do
-  let (loQueue, _) =
+  let (niStore, loQueue, _) =
         unsafePerformIO $ prepareStores acceptedItems connId
-  acceptLogObjects tfConfig loQueue
+  acceptLogObjects tfConfig loQueue niStore
 
 prepareStores
   :: Show addr
   => AcceptedItems
   -> ConnectionId addr
-  -> IO (LogObjects, Metrics)
+  -> IO (TF.NodeInfoStore, LogObjects, Metrics)
 prepareStores acceptedItems ConnectionId{..} = do
-  -- Remote address of the node is unique (from logger's point of view), use it as 'NodeId'.
-  let nodeId = show remoteAddress
+  -- Remote address of the node is unique identifier, from the logger's point of view.
+  let nodeId = addressToNodeId $ show remoteAddress
   prepareAcceptedItems nodeId acceptedItems
   items <- readIORef acceptedItems
   return $ items ! nodeId

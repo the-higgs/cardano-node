@@ -22,7 +22,7 @@ runLogsHandler
 runLogsHandler config acceptedItems = forever $ do
   threadDelay 2000000
   items <- HM.toList <$> readIORef acceptedItems
-  forM_ items $ \(nodeId, (loQueue, _)) ->
+  forM_ items $ \(nodeId, (_niStore, loQueue, _)) ->
     atomically (getAllLogObjects loQueue) >>= writeLogObjects config nodeId
 
 getAllLogObjects :: TBQueue lo -> STM [lo]

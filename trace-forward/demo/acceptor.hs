@@ -42,10 +42,13 @@ main = do
   -- Create an empty TBQueue where received 'LogObject's will be stored.
   queue <- newTBQueueIO 100
 
+  -- Create an empty store where received node's info will be stored.
+  niStore <- newIORef []
+
   -- Run the acceptor. It will listen to the forwarder, and after the connection
   -- will be established, the acceptor will ask for N 'LogObject's from the forwarder.
   -- After these 'LogObject's will be received, the acceptor will write them in the 'queue'.
-  runTraceAcceptor config queue
+  runTraceAcceptor config queue niStore
 
 -- We need it for 'AcceptorConfiguration lo' (in this example it is 'LogObject Text').
 instance ShowProxy (LogObject Text)

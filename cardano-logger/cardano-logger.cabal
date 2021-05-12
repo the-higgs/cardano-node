@@ -53,6 +53,7 @@ library
                        , contra-tracer
                        , ekg-core
                        , ekg-forward
+                       , hashable
                        , iohk-monitoring
                        , network
                        , optparse-applicative
