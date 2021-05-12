@@ -134,8 +134,7 @@ instance Eq (Tx era) where
         ShelleyBasedEraShelley -> txA == txB
         ShelleyBasedEraAllegra -> txA == txB
         ShelleyBasedEraMary    -> txA == txB
-        ShelleyBasedEraAlonzo  ->
-          error "Eq (Tx era): Alonzo era not implemented yet"
+        ShelleyBasedEraAlonzo  -> txA == txB
 
     (==) ByronTx{} (ShelleyTx era _) = case era of {}
 
@@ -161,9 +160,10 @@ instance Show (Tx era) where
         showString "ShelleyTx ShelleyBasedEraMary "
       . showsPrec 11 tx
 
-    showsPrec _ (ShelleyTx ShelleyBasedEraAlonzo _) =
-      error "Show (Tx era): Alonzo era not implemented yet"
-
+    showsPrec p (ShelleyTx ShelleyBasedEraAlonzo tx) =
+      showParen (p >= 11) $
+        showString "ShelleyTx ShelleyBasedEraAlonzo "
+      . showsPrec 11 tx
 
 
 instance HasTypeProxy era => HasTypeProxy (Tx era) where

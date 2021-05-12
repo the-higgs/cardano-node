@@ -43,7 +43,6 @@ module Cardano.Node.Types
   , NodeHardForkProtocolConfiguration(..)
   , NodeProtocolConfiguration(..)
   , NodeShelleyProtocolConfiguration(..)
-  , NodeAlonzoProtocolConfiguration(..)
   , VRFPrivateKeyFilePermissionError(..)
   , protocolName
   , renderVRFPrivateKeyFilePermissionError
@@ -262,15 +261,8 @@ data NodeProtocolConfiguration =
      | NodeProtocolConfigurationShelley NodeShelleyProtocolConfiguration
      | NodeProtocolConfigurationCardano NodeByronProtocolConfiguration
                                         NodeShelleyProtocolConfiguration
-                                        NodeAlonzoProtocolConfiguration
                                         NodeHardForkProtocolConfiguration
   deriving (Eq, Show)
-
-data NodeAlonzoProtocolConfiguration =
-       NodeAlonzoProtocolConfiguration
-         { npcAlonzoGenesisFile     :: !GenesisFile
-         } deriving (Eq, Show)
-
 
 data NodeShelleyProtocolConfiguration =
      NodeShelleyProtocolConfiguration {
@@ -379,6 +371,7 @@ data NodeHardForkProtocolConfiguration =
        -- configured the same, or they will disagree.
        --
      , npcTestAlonzoHardForkAtVersion :: Maybe Word
+     -- TODO: npcTestEnableDevelopmentHardForkEras :: Bool
      }
   deriving (Eq, Show)
 
@@ -399,10 +392,9 @@ instance AdjustFilePaths NodeProtocolConfiguration where
   adjustFilePaths f (NodeProtocolConfigurationShelley pc) =
     NodeProtocolConfigurationShelley (adjustFilePaths f pc)
 
-  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pca pch) =
+  adjustFilePaths f (NodeProtocolConfigurationCardano pcb pcs pch) =
     NodeProtocolConfigurationCardano (adjustFilePaths f pcb)
                                      (adjustFilePaths f pcs)
-                                     (adjustFilePaths f pca)
                                      pch
 
 instance AdjustFilePaths NodeByronProtocolConfiguration where
@@ -416,14 +408,6 @@ instance AdjustFilePaths NodeShelleyProtocolConfiguration where
                         npcShelleyGenesisFile
                       } =
     x { npcShelleyGenesisFile = adjustFilePaths f npcShelleyGenesisFile }
-
-
-instance AdjustFilePaths NodeAlonzoProtocolConfiguration where
-  adjustFilePaths f x@NodeAlonzoProtocolConfiguration {
-                        npcAlonzoGenesisFile
-                      } =
-    x { npcAlonzoGenesisFile = adjustFilePaths f npcAlonzoGenesisFile }
-
 
 instance AdjustFilePaths SocketPath where
   adjustFilePaths f (SocketPath p) = SocketPath (f p)

@@ -51,7 +51,7 @@ readAlonzoGenesis fpath = do
                        `catchError` \err ->
                          case err of
                            AlonzoGenesisFileError (FileIOError _ ioe)
-                             | isDoesNotExistError ioe -> panic "Shelley genesis file not found."
+                             | isDoesNotExistError ioe -> left $ GenesisFileNotFound fpath
                            _                           -> left err
   createAlonzoGenesis alonzoGenWrapper
 
@@ -104,6 +104,7 @@ data AlonzoProtocolInstantiationError
   | AlonzoCostModelDecodeError !FilePath !Text
   | AlonzoGenesisFileError !(FileError ())
   | AlonzoGenesisDecodeError !FilePath !Text
+  | GenesisFileNotFound !FilePath
   deriving Show
 
 

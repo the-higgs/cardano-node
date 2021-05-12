@@ -19,13 +19,12 @@ module Cardano.Tracing.OrphanInstances.Shelley () where
 
 import           Cardano.Prelude
 
-import           Data.Aeson (Value (..))
+import           Data.Aeson (Value (..), object)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 
 import qualified Cardano.Api as Api
 import           Cardano.Api.Orphans ()
@@ -49,11 +48,16 @@ import qualified Ouroboros.Consensus.Shelley.Protocol.HotKey as HotKey
 
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import           Cardano.Ledger.Alonzo as Alonzo
+import           Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail)
+import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo
 import           Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.AuxiliaryData as Core
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Core as Ledger
 import qualified Cardano.Ledger.Crypto as Core
+import qualified Cardano.Ledger.Era as Ledger
 import qualified Cardano.Ledger.SafeHash as SafeHash
 import qualified Cardano.Ledger.Shelley.Constraints as Shelley
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA
@@ -304,8 +308,8 @@ instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
              ]
   toObject _ (DataHashSetsDontAgree fromTx fromUtxo) =
     mkObject [ "kind" .= String "DataHashSetsDontAgree"
-             , "fromTx" .= map (hashToText . SafeHash.extractHash) (Set.toList fromTx)
-             , "fromUtxo" .= map (hashToText . SafeHash.extractHash) (Set.toList fromUtxo)
+             , "fromTx" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList fromTx)
+             , "fromUtxo" .= map (Crypto.hashToTextAsHex . SafeHash.extractHash) (Set.toList fromUtxo)
              ]
   toObject _ (PPViewHashesDontMatch ppHashInTxBody ppHashFromPParams) =
     mkObject [ "kind" .= String "PPViewHashesDontMatch"
@@ -322,7 +326,8 @@ instance ToObject (AlonzoPredFail (Alonzo.AlonzoEra StandardCrypto)) where
              ]
 
 renderWitnessPPDataHash :: Maybe (Alonzo.WitnessPPDataHash StandardCrypto) -> Aeson.Value
-renderWitnessPPDataHash (Just witPPDataHash) = Aeson.String . hashToText $ SafeHash.extractHash witPPDataHash
+renderWitnessPPDataHash (Just witPPDataHash) =
+  Aeson.String . Crypto.hashToTextAsHex $ SafeHash.extractHash witPPDataHash
 renderWitnessPPDataHash Nothing = Aeson.Null
 
 renderScriptHash :: ScriptHash StandardCrypto -> Text
@@ -835,13 +840,34 @@ instance ToObject (UpecPredicateFailure era) where
              , "depositPot" .= String (textShow depositPot)
              ]
 
+
+--------------------------------------------------------------------------------
+-- Alonzo related
+--------------------------------------------------------------------------------
+
+
+instance ToObject (Alonzo.UtxoPredicateFailure (Alonzo.AlonzoEra StandardCrypto)) where
+  toObject _ _ = panic "ToJSON: UtxoPredicateFailure not implemented yet"
+
+instance ToObject (AlonzoBbodyPredFail (Alonzo.AlonzoEra StandardCrypto)) where
+  toObject _ _ = panic "ToJSON: AlonzoBbodyPredFail not implemented yet"
+
+instance (Ledger.Era era, Show (Ledger.Value era), ToJSON (Ledger.Value era))
+    => ToJSON (Alonzo.TxOut era) where
+  toJSON (Alonzo.TxOut addr v dataHash) =
+    object [ "address" .= toJSON addr
+           , "value" .= toJSON v
+           , "datahash" .= case strictMaybeToMaybe dataHash of
+                             Nothing -> Aeson.Null
+                             Just dHash ->
+                               Aeson.String . Crypto.hashToTextAsHex
+                                 $ SafeHash.extractHash dHash
+           ]
+
+
 --------------------------------------------------------------------------------
 -- Helper functions
 --------------------------------------------------------------------------------
-
-
-hashToText :: Crypto.Hash crypto a -> Text
-hashToText = Text.decodeLatin1 . Crypto.hashToBytesAsHex
 
 textShow :: Show a => a -> Text
 textShow = Text.pack . show

@@ -621,13 +621,13 @@ mkProtocolInfoCardano (GenesisCardano dnc byronGenesis shelleyGenesis)
             { Consensus.maryProtVer = shelleyProtVer dnc
             }
           Consensus.ProtocolParamsAlonzo
-            { Consensus.alonzoGenesis = undefined
-            , Consensus.alonzoProtVer = undefined
+            { Consensus.alonzoGenesis = error "mkProtocolInfoCardano: alonzoGenesis"
+            , Consensus.alonzoProtVer = error "mkProtocolInfoCardano: alonzoProtVer"
             }
           (ncByronToShelley dnc)
           (ncShelleyToAllegra dnc)
           (ncAllegraToMary dnc)
-          undefined
+          (error "mkProtocolInfoCardano: ProtocolParamsTransition (ShelleyBlock (MaryEra c)) (ShelleyBlock (AlonzoEra c))")
 
 shelleyPraosNonce :: ShelleyConfig -> Shelley.Spec.Nonce
 shelleyPraosNonce sCfg = Shelley.Spec.Nonce (Cardano.Crypto.Hash.Class.castHash . unGenesisHashShelley $ scGenesisHash sCfg)

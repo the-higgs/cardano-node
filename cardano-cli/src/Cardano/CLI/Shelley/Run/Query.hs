@@ -763,5 +763,6 @@ obtainLedgerEraClassConstraints
 obtainLedgerEraClassConstraints ShelleyBasedEraShelley f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraAllegra f = f
 obtainLedgerEraClassConstraints ShelleyBasedEraMary    f = f
-obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  _ = panic "TODO"
+obtainLedgerEraClassConstraints ShelleyBasedEraAlonzo  _ =
+  panic "obtainLedgerEraClassConstraints: Alonzo era not implemented yet"
 

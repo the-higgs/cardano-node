@@ -966,6 +966,8 @@ createAlonzoGenesis
 createAlonzoGenesis (AlonzoGenWrapper costModelFp' alonzoGenesis) = do
   costModel <- readAndDecode
   case Plutus.extractModelParams costModel of
+    -- TODO: We should not be using functions directly from the plutus repo
+    -- These should be exposed via the ledger
     Just m -> if Plutus.validateCostModelParams m
               then left $ ShelleyGenesisCmdCostModelsError costModelFp'
               else return $ alonzoGenesis { Alonzo.costmdls = Map.singleton Alonzo.PlutusV1 $ Alonzo.CostModel m }

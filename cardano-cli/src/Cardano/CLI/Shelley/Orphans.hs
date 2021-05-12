@@ -110,11 +110,11 @@ deriving instance FromJSON Alonzo.Prices
 -- of the genesis file.
 instance FromJSON Alonzo.AlonzoGenesis where
   parseJSON = withObject "Alonzo Genesis" $ \o -> do
-    adaPerWord <-  o .: "alonzoAdaPerUTxOWord"
-    execPrices <-  o .: "alonzoExecutionPrices"
-    maxTxExUnits' <-  o .: "alonzoMaxTxExUnits"
-    maxBlockExUnits' <-  o .: "alonzoMaxBlockExUnits"
-    maxMaSize <-  o .: "alonzoMaxMultiAssetSize"
+    adaPerWord <-  o .: "adaPerUTxOWord"
+    execPrices <-  o .: "executionPrices"
+    maxTxExUnits' <-  o .: "maxTxExUnits"
+    maxBlockExUnits' <-  o .: "maxBlockExUnits"
+    maxMaSize <-  o .: "maxMultiAssetSize"
     return $ Alonzo.AlonzoGenesis
                { adaPerUTxOWord = adaPerWord
                , costmdls = mempty

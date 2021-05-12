@@ -61,7 +61,6 @@ import           Cardano.Node.Protocol.Types
 mkSomeConsensusProtocolCardano
   :: NodeByronProtocolConfiguration
   -> NodeShelleyProtocolConfiguration
-  -> NodeAlonzoProtocolConfiguration
   -> NodeHardForkProtocolConfiguration
   -> Maybe ProtocolFilepaths
   -> ExceptT CardanoProtocolInstantiationError IO SomeConsensusProtocol
@@ -79,9 +78,6 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                            NodeShelleyProtocolConfiguration {
                              npcShelleyGenesisFile,
                              npcShelleyGenesisFileHash
-                           }
-                           NodeAlonzoProtocolConfiguration {
-                             npcAlonzoGenesisFile
                            }
                            NodeHardForkProtocolConfiguration {
                              npcTestShelleyHardForkAtEpoch,
@@ -113,9 +109,8 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
       firstExceptT CardanoProtocolInstantiationErrorShelley $
         Shelley.readLeaderCredentials files
 
-    -- In order to avoid creating another genesis file, we can include
-    -- the Alonzo relevant fields in the Shelley genesis and therefore
-    --
+    -- We choose to include the Alonzo relevant fields in the Shelley genesis
+    -- and therefore avoid creating a separate Alonzo genesis file
     let GenesisFile shelleyGenFile = npcShelleyGenesisFile
     alonzoGen <- firstExceptT CardanoProtocolInstantiationErrorAlonzo
                    $ readAlonzoGenesis shelleyGenFile
@@ -177,13 +172,16 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
           -- is in the Mary era. Since Mary is currently the last known
           -- protocol version then this is also the Mary protocol version.
           maryProtVer =
-            ProtVer 4 0
+            ProtVer 3 0
         }
+        -- TODO: TestEnableDevelopmentHardForkEras :: Bool. This bool
+        -- will tell use whether or not to change the 'maryProtVer' field
+        -- from version 4 to version 5 so that we can fork to version 5
         Consensus.ProtocolParamsAlonzo {
           -- This is /not/ the Alonzo protocol version. It is the protocol
           -- version that this node will declare that it understands, when it
           -- is in the Alonzo era. Since Alonzo is currently the last known
-          -- protocol version then this is a        Consensus.ProtocolParamsTransition {
+          -- protocol version then this is also the Alonzo protocol version.
           alonzoGenesis = alonzoGen,
           alonzoProtVer = ProtVer 5 0
         }
@@ -204,6 +202,7 @@ mkSomeConsensusProtocolCardano NodeByronProtocolConfiguration {
                -- Version 2 is Shelley
                -- Version 3 is Allegra
                -- Version 4 is Mary
+               -- Version 5 is Alonzo
                --
                -- But we also provide an override to allow for simpler test setups
                -- such as triggering at the 0 -> 1 transition .

@@ -48,6 +48,8 @@ transactionFee txFeeFixed txFeePerByte tx =
   in case tx of
        ShelleyTx _ tx' -> let x = getField @"txsize" tx'
                           in Lovelace (a * x + b)
+       --TODO: This can be made to work for Byron txs too. Do that: fill in this case
+       -- and remove the IsShelleyBasedEra constraint.
        ByronTx _ -> case shelleyBasedEra :: ShelleyBasedEra ByronEra of {}
 
 

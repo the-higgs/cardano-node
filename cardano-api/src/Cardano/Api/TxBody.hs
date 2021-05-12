@@ -952,8 +952,18 @@ instance Show (TxBody era) where
         . showsPrec 11 txmetadata
         )
 
-    showsPrec _ (ShelleyTxBody ShelleyBasedEraAlonzo _ _ _) =
-      error "Show (TxBody era): Alonzo not implemented yet"
+    showsPrec p (ShelleyTxBody ShelleyBasedEraAlonzo
+                               txbody txscripts txmetadata) =
+      showParen (p >= 11)
+        ( showString "ShelleyTxBody ShelleyBasedEraMary "
+        . showsPrec 11 txbody
+        . showChar ' '
+        . showsPrec 11 txscripts
+        . showChar ' '
+        . showsPrec 11 txmetadata
+        )
+
+
 instance HasTypeProxy era => HasTypeProxy (TxBody era) where
     data AsType (TxBody era) = AsTxBody (AsType era)
     proxyToAsType _ = AsTxBody (proxyToAsType (Proxy :: Proxy era))
@@ -981,7 +991,7 @@ instance IsCardanoEra era => SerialiseAsCBOR (TxBody era) where
         ShelleyBasedEraShelley -> serialiseShelleyBasedTxBody txbody txscripts txmetadata
         ShelleyBasedEraAllegra -> serialiseShelleyBasedTxBody txbody txscripts txmetadata
         ShelleyBasedEraMary    -> serialiseShelleyBasedTxBody txbody txscripts txmetadata
-        ShelleyBasedEraAlonzo  -> error ""
+        ShelleyBasedEraAlonzo  -> error "serialiseToCBOR: Alonzo era not implemented yet"
 
     deserialiseFromCBOR _ bs =
       case cardanoEra :: CardanoEra era of

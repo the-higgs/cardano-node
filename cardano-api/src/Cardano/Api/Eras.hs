@@ -158,6 +158,7 @@ instance TestEquality CardanoEra where
     testEquality ShelleyEra ShelleyEra = Just Refl
     testEquality AllegraEra AllegraEra = Just Refl
     testEquality MaryEra    MaryEra    = Just Refl
+    testEquality AlonzoEra  AlonzoEra  = Just Refl
     testEquality _          _          = Nothing
 
 

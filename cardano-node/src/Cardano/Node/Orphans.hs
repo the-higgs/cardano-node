@@ -15,8 +15,10 @@ import           Cardano.Api.Orphans ()
 
 import           Data.Aeson (FromJSON (..), ToJSON (..), ToJSONKey, Value (..), withObject, (.:))
 import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Base16 as Base16
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 
 
 
@@ -55,11 +57,14 @@ deriving instance ToJSON (MemoBytes.MemoBytes (Map ByteString Integer))
 --TODO: I assume we are not interested in rendering
 --plutus scripts as JSON.
 instance ToJSON SBS.ShortByteString where
-  toJSON _plutusScriptBytes = Aeson.String "Plutus script placeholder"
+  toJSON plutusScriptBytes =
+    case Base16.decode $ SBS.fromShort plutusScriptBytes of
+      Right base16Bytes -> Aeson.String $ Text.decodeLatin1 base16Bytes
+      Left err -> panic $ "Failed to decode plutus script: " <> Text.pack err
 
--- Obviously incorrect. Need to fix.
+-- TODO: Obviously incorrect. Need to fix.
 deriving instance ToJSONKey SBS.ShortByteString
--- Obviously incorrect. Need to fix.
+-- TODO: Obviously incorrect. Need to fix.
 deriving instance ToJSONKey ByteString
 deriving instance ToJSONKey Alonzo.Language
 deriving instance ToJSON Alonzo.CostModel
@@ -84,11 +89,11 @@ instance FromJSON Update.ApplicationName where
 -- of the genesis file.
 instance FromJSON AlonzoGenesis where
   parseJSON = withObject "Alonzo Genesis" $ \o -> do
-    adaPerWord <-  o .: "alonzoAdaPerUTxOWord"
-    execPrices <-  o .: "alonzoExecutionPrices"
-    maxTxExUnits' <-  o .: "alonzoMaxTxExUnits"
-    maxBlockExUnits' <-  o .: "alonzoMaxBlockExUnits"
-    maxMaSize <-  o .: "alonzoMaxMultiAssetSize"
+    adaPerWord <-  o .: "adaPerUTxOWord"
+    execPrices <-  o .: "executionPrices"
+    maxTxExUnits' <-  o .: "maxTxExUnits"
+    maxBlockExUnits' <-  o .: "maxBlockExUnits"
+    maxMaSize <-  o .: "maxMultiAssetSize"
     return $ AlonzoGenesis
                { adaPerUTxOWord = adaPerWord
                , costmdls = mempty
